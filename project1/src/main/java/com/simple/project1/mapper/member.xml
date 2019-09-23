@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="memberdb">
+	
+	<select id="isUse" parameterType="HashMap" resultType="int">
+		SELECT count(*)
+		FROM p1member
+		WHERE ${title} = #{check}
+	</select>
+	
+	<insert id="memberAdd" parameterType="com.simple.project1.model.MemberVO">
+		INSERT INTO p1member(memberidx,memberId,nickname,memberPwd,memberName,email,birthDay,memberTel,gender)
+		VALUES(seq_p1member.nextval,#{memberId},#{nickname},#{memberPwd},#{memberName},#{email},#{birthDay},#{memberTel},#{gender})
+	</insert>
+	
+	<select id="getLogin" parameterType="com.simple.project1.model.MemberVO" resultType="com.simple.project1.model.MemberVO">
+		SELECT *
+		FROM p1member
+		WHERE status=1 and memberId = #{memberId} and memberPwd = #{memberPwd}
+	</select>
+	
+	<update id="memberEdit" parameterType="com.simple.project1.model.MemberVO">
+		<if test='picture!=null and picture!=""'>
+			UPDATE p1member
+			SET memberName=#{memberName},nickname=#{nickname},email=#{email},memberTel=#{memberTel},memberPwd=#{memberPwd},picture=#{picture}
+			WHERE memberId=#{memberId}
+		</if>
+		<if test='picture==null or picture==""'>
+			UPDATE p1member
+			SET memberName=#{memberName},nickname=#{nickname},email=#{email},memberTel=#{memberTel},memberPwd=#{memberPwd}
+			WHERE memberId=#{memberId}
+		</if>
+	</update>
+	
+	<update id="memberOut" parameterType="int">
+		UPDATE p1member
+		SET status=0
+		WHERE memberidx=#{memberidx}
+	</update>
+	
+	<select id="getReserveInfo" parameterType="com.simple.project1.model.HotelRoomVO" resultType="com.simple.project1.model.HotelRoomVO">
+		SELECT hotelName,address,hotelImg ,a.hotelidx,roomidx,roomType,roomName,weekPrice,WeekendPrice
+		FROM 
+		    (SELECT hotelidx,roomidx,roomType,roomName,weekPrice,WeekendPrice
+		     FROM p1roomlist
+		     WHERE roomstatus=1 AND sysdate BETWEEN roomperiod1 AND roomperiod2 
+		     AND roomidx=#{roomidx}) B
+		JOIN
+		    (SELECT hotelidx,hotelName,address,hotelImg 
+		     FROM p1hotellist 
+		     WHERE hotelStatus=1) A
+		ON a.hotelidx=b.hotelidx
+	</select>
+
+	<select id="getReserveCnt" parameterType="int" resultType="int">
+		SELECT count(*) 
+		FROM p1reserve 
+		WHERE memberidx=#{memberidx}
+	</select>
+
+	<select id="getReserveList" parameterType="com.simple.project1.model.HotelRoomVO" resultType="com.simple.project1.model.HotelRoomVO">
+		SELECT *
+		FROM(SELECT ROW_NUMBER() OVER(ORDER BY reserveidx DESC) NUM, reserveidx as roomidx,hotelRegDay,checkin_date,checkout_date,roomStatus,weekPrice,weekendPrice,roomType,roomName,A.hotelidx,hotelName,businessTel,address,hotelImg
+			 FROM
+			     (SELECT roomidx,reserveidx,reserveDate as hotelRegDay,hotelidx,checkIn as checkin_date,checkOut as checkout_date,reserveStatus as roomStatus,price as weekPrice,vat as weekendPrice
+			      FROM p1reserve
+			      WHERE memberidx=#{memberidx}
+			     )A
+			 JOIN 
+			     (SELECT roomidx,roomType,roomName,A.hotelidx,hotelName,businessTel,address,hotelImg
+			      FROM p1roomlist A join p1hotellist B
+			      ON A.hotelidx = B.hotelidx
+			     )B
+			ON A.roomidx = B.roomidx)
+		WHERE NUM BETWEEN #{startRno} AND #{endRno}	
+	</select>
+	
+	<update id="setUpdateReserveCancel" parameterType="String">
+		UPDATE p1reserve
+		SET reserveStatus=0
+		WHERE reserveidx=#{reserveidx}
+	</update>
+	
+	<insert id="setInsertReview" parameterType="com.simple.project1.model.ReviewVO">
+		INSERT INTO p1review(reviewidx,reserveidx,memberidx,hotelidx,star,title,content)
+		VALUES(seq_p1review.nextval,#{reserveidx},#{memberidx},#{hotelidx},#{star},#{title},#{content})
+	</insert>
+	
+	<insert id="setInsertReview_attach" parameterType="String">
+		INSERT INTO P1REVIEW_IMG(reviewImgidx,reviewidx,reviewImg)
+		VALUES(seq_p1review_img.nextval,seq_p1review.currval,#{reviewImg})
+	</insert>
+	
+	<update id="setUpdateReserveStatusReview" parameterType="int">
+		UPDATE p1reserve
+		SET reserveStatus = 4
+		WHERE reserveidx=#{reserveidx}
+	</update>
+	
+	<update id="setUpdateReserveStatusPoint" parameterType="int">
+		UPDATE p1reserve
+		SET reserveStatus = 5
+		WHERE reserveidx=#{reserveidx}
+	</update>
+	
+	<update id="setUpdateMemberPoint" parameterType="com.simple.project1.model.HotelRoomVO">
+		UPDATE p1member
+		SET point = point + #{weekendPrice}
+		WHERE memberidx=#{memberidx}
+	</update>
+	
+	<select id="getFindMemberId" parameterType="com.simple.project1.model.MemberVO" resultType="String">
+		SELECT memberId
+		FROM p1member
+		WHERE status=1 and email=#{email}
+		<if test='memberName!=null and memberName!=""'>
+			and memberName=#{memberName} 
+		</if>
+		<if test='memberId!=null and memberId!=""'>
+			and memberId=#{memberId} 
+		</if>
+	</select>
+	
+	<update id="setMemberPwd" parameterType="com.simple.project1.model.MemberVO">
+		UPDATE p1member
+		SET memberPwd = #{memberPwd}
+		WHERE memberId=#{memberId}
+	</update>
+	
+	<select id="getHeart" parameterType="HashMap" resultType="int">
+		SELECT nvl(sum(likeStatus),0)
+		FROM p1LikeList
+		WHERE memberidx=#{memberidx} and hotelidx=#{hotelidx}
+	</select>
+	
+	<insert id="setAddHeart" parameterType="HashMap">
+		INSERT INTO p1LikeList(hotelidx,memberidx)
+		VALUES(#{hotelidx},#{memberidx})
+	</insert>
+	
+	<update id="setDelHeart" parameterType="HashMap">
+		UPDATE p1LikeList
+		SET likeStatus = 0
+		WHERE memberidx=#{memberidx} and hotelidx=#{hotelidx}
+	</update>
+	
+	<select id="getHeartCnt" parameterType="int" resultType="int">
+		SELECT count(*) 
+		FROM p1likelist 
+		WHERE memberidx=#{memberidx} and likestatus=1
+	</select>
+	
+	<select id="getHeartList" parameterType="com.simple.project1.model.HotelRoomVO" resultType="com.simple.project1.model.HotelRoomVO">
+		SELECT *
+		FROM
+			(SELECT ROW_NUMBER() OVER(ORDER BY b.hotelidx) NUM ,A.*,b.heart
+	    	 FROM
+				 (SELECT A.*,b.starRating,b.starCnt 
+ 				  FROM 
+				 	 (SELECT hotelidx,hotelname,hotelinfo,hotelimg,address
+ 				 	  FROM p1hotellist 
+				 	  WHERE hotelstatus=1
+				 	 ) A 
+				  LEFT JOIN 
+				 	 (SELECT hotelidx,avg(star) starRating, count(*) as starCnt
+ 					  FROM p1review
+	                  GROUP BY hotelidx) B
+	              ON a.hotelidx=b.hotelidx) A 
+			 JOIN 
+				 (SELECT hotelidx,likestatus AS heart 
+ 				  FROM p1likelist 
+				  WHERE memberidx=#{memberidx} AND likestatus=1) B
+			 ON a.hotelidx=b.hotelidx)
+		WHERE NUM BETWEEN #{startRno} AND #{endRno}
+	</select>
+</mapper>

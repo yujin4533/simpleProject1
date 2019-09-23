@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="productdb">
+
+	<select id="getHotelListNew" resultType="com.simple.project1.model.HotelRoomVO">
+		SELECT A.*,B.starCnt,b.starRating 
+		FROM
+		(
+		    SELECT A.hotelidx,A.address,A.hotelImg,A.hotelName
+		    FROM 
+		        (SELECT hotelidx,address,hotelimg,hotelname
+		         FROM p1hotellist
+		         WHERE hotelStatus=1) 
+		    A 
+		    JOIN 
+		        (SELECT hotelidx
+		         FROM
+		            (SELECT ROW_NUMBER() OVER(ORDER BY max(roomperiod1))as num,hotelidx,max(roomperiod1)
+		             FROM p1roomlist
+		             WHERE roomstatus=1
+		             GROUP BY hotelidx)
+		        WHERE num BETWEEN 1 AND 9
+		    )B
+		    ON A.hotelidx=B.hotelidx
+		)A 
+		LEFT JOIN
+			(SELECT hotelidx,count(*) as starCnt,avg(star) as starRating
+		     FROM p1review
+		     GROUP BY hotelidx
+		) B
+		ON A.hotelidx=B.hotelidx
+	</select>
+	<select id="getHotelListBest" resultType="com.simple.project1.model.HotelRoomVO">
+		SELECT A.*,B.starCnt,b.starRating 
+		FROM
+		(
+		    SELECT A.hotelidx,A.address,A.hotelImg,A.hotelName
+		    FROM 
+		        (SELECT hotelidx,address,hotelimg,hotelname
+		         FROM p1hotellist
+		         WHERE hotelStatus=1) 
+		    A 
+		    JOIN 
+		        (SELECT hotelidx
+		         FROM
+		            (SELECT ROW_NUMBER() OVER(ORDER BY count(*))as num,hotelidx 
+		             FROM p1reserve 
+		             WHERE reservestatus<![CDATA[>]]>0 
+		             GROUP BY hotelidx)
+		        WHERE num BETWEEN 1 AND 9
+		    )B
+		    ON A.hotelidx=B.hotelidx
+		)A 
+		LEFT JOIN
+			(SELECT hotelidx,count(*) as starCnt,avg(star) as starRating
+		     FROM p1review
+		     GROUP BY hotelidx
+		) B
+		ON A.hotelidx=B.hotelidx
+	</select>
+
+	<select id="getHotelCnt" parameterType="com.simple.project1.model.HotelRoomVO" resultType="int">
+		SELECT count(A.hotelidx)
+		FROM
+		    (SELECT B.*,A.weekPrice,A.weekendPrice
+		     FROM 
+		        (SELECT B.hotelidx, min(b.weekPrice) as weekPrice,min(b.weekendPrice) as weekendPrice
+		         FROM 
+		            (SELECT roomidx 
+		             FROM p1reserve 
+		             <if test='checkin_date=="" or checkout_date=="" or checkin_date==null or checkout_date==null'>
+		             	WHERE reserveStatus<![CDATA[>]]>70
+		             </if> 
+		             <if test='checkin_date!="" and checkout_date!="" and checkin_date!=null and checkout_date!=null'>
+			             WHERE reserveStatus<![CDATA[>]]>0
+  			               and (#{checkin_date} BETWEEN CHECKIN+1 AND CHECKOUT-1
+				               OR #{checkout_date} BETWEEN CHECKIN+1 AND CHECKOUT-1
+				               OR (#{checkin_date}<![CDATA[<]]>CHECKIN+1 AND CHECKOUT-1<![CDATA[<]]>#{checkout_date}))
+		             </if> 
+		              ) A 
+		        RIGHT JOIN 
+		              (SELECT * 
+		               FROM p1roomlist 
+		               WHERE roomstatus=1
+		               <if test="minPrice>=0 and minPrice!=null and maxPrice>=0 and maxPrice!=null">	
+		               AND ((#{minPrice}<![CDATA[<=]]>weekPrice AND weekPrice<![CDATA[<=]]>#{maxPrice}) OR (#{minPrice}<![CDATA[<=]]>weekendPrice and weekendPrice<![CDATA[<=]]>#{maxPrice}))
+		               </if> 
+		               <if test="per>=0 and per!=null">	
+		               AND to_number(substr(roomType,2))<![CDATA[>=]]>#{per}
+		               </if>
+		               <if test="roomOptionList!=null">and 
+				      	<foreach collection="roomOptionList" item="item" index="index" separator="and" open="(" close=")">
+				      		roomOption LIKE '%'||#{item}||'%'
+				      	</foreach> 
+			      	  </if> 
+		               ) B
+		        ON A.roomidx=B.roomidx
+		        WHERE A.roomidx IS NULL
+		        GROUP BY B.hotelidx
+		        ) A 
+		    JOIN 
+		        (SELECT hotelidx,hotelName,address,hotelImg 
+		         FROM p1hotellist 
+		         WHERE hotelStatus=1
+		         <if test="categoryCodeList!=null">and
+					<foreach collection="categoryCodeList" item="item" index="index" separator="or" open="(" close=")">
+				    	categoryCode LIKE '%'||#{item}||'%'
+				    </foreach> 
+			     </if>
+			     <if test="hotelOptionList!=null">and
+				      <foreach collection="hotelOptionList" item="item" index="index" separator="and" open="(" close=")">
+				      	hotelOption LIKE '%'||#{item}||'%'
+				      </foreach> 
+			     </if>
+			     <if test='searchWord!="" and searchWord!=null'>
+				 	and (
+				 	hotelInfo like '%'||#{searchWord}||'%' 
+				 	OR hotelName like '%'||#{searchWord}||'%' 
+		        	OR address like '%'||#{searchWord}||'%' 
+				 	)
+			     </if>
+			      <if test='hotelName!="" and hotelName!=null'>
+				  	AND hotelName like '%'||#{hotelName}||'%'
+			      </if>
+		        ) B
+		    ON A.hotelidx=B.hotelidx)A
+		LEFT JOIN 
+		    (SELECT hotelidx,avg(star) as starRating,count(star) as starCnt 
+		     FROM p1review 
+		     GROUP BY hotelidx ) B
+		ON A.hotelidx=B.hotelidx
+		<if test="minStar>=0 and minStar!=null and maxStar>=0 and maxStar!=null">
+	    	WHERE NVL(B.starRating,0) BETWEEN #{minStar} AND #{maxStar}
+	    </if>
+	</select>
+
+	<select id="getHotelPagingList" parameterType="com.simple.project1.model.HotelRoomVO" resultType="com.simple.project1.model.HotelRoomVO">
+		<if test="memberidx==null or memberidx==0">
+			SELECT A.*,B.starRating,B.starCnt
+			FROM
+			    (SELECT ROW_NUMBER() OVER(ORDER BY B.hotelidx) NUM,B.*,A.weekPrice,A.weekendPrice
+			     FROM 
+			        (SELECT B.hotelidx, min(b.weekPrice) as weekPrice,min(b.weekendPrice) as weekendPrice
+			         FROM 
+			            (SELECT roomidx 
+			             FROM p1reserve 
+			             <if test='checkin_date=="" or checkout_date=="" or checkin_date==null or checkout_date==null'>
+			             	WHERE reserveStatus<![CDATA[>]]>70
+			             </if> 
+			             <if test='checkin_date!="" and checkout_date!="" and checkin_date!=null and checkout_date!=null'>
+				             WHERE reserveStatus<![CDATA[>]]>0
+	  			               and (#{checkin_date} BETWEEN CHECKIN+1 AND CHECKOUT-1
+					               OR #{checkout_date} BETWEEN CHECKIN+1 AND CHECKOUT-1
+					               OR (#{checkin_date}<![CDATA[<]]>CHECKIN+1 AND CHECKOUT-1<![CDATA[<]]>#{checkout_date}))
+			             </if> 
+			              ) A 
+			        RIGHT JOIN 
+			              (SELECT * 
+			               FROM p1roomlist 
+			               WHERE roomstatus=1
+			               <if test="minPrice>=0 and minPrice!=null and maxPrice>=0 and maxPrice!=null">	
+			               AND ((#{minPrice}<![CDATA[<=]]>weekPrice AND weekPrice<![CDATA[<=]]>#{maxPrice}) OR (#{minPrice}<![CDATA[<=]]>weekendPrice and weekendPrice<![CDATA[<=]]>#{maxPrice}))
+			               </if> 
+			               <if test="per>=0 and per!=null">	
+			               AND to_number(substr(roomType,2))<![CDATA[>=]]>#{per}
+			               </if>
+			               <if test="roomOptionList!=null">and 
+					      	<foreach collection="roomOptionList" item="item" index="index" separator="and" open="(" close=")">
+					      		roomOption LIKE '%'||#{item}||'%'
+					      	</foreach> 
+				      	  </if> 
+			               ) B
+			        ON A.roomidx=B.roomidx
+			        WHERE A.roomidx IS NULL
+			        GROUP BY B.hotelidx
+			        ) A 
+			    JOIN 
+			        (SELECT hotelidx,hotelName,address,hotelImg 
+			         FROM p1hotellist 
+			         WHERE hotelStatus=1
+			         <if test="categoryCodeList!=null">and
+						<foreach collection="categoryCodeList" item="item" index="index" separator="or" open="(" close=")">
+					    	categoryCode LIKE '%'||#{item}||'%'
+					    </foreach> 
+				     </if>
+				     <if test="hotelOptionList!=null">and
+					      <foreach collection="hotelOptionList" item="item" index="index" separator="and" open="(" close=")">
+					      	hotelOption LIKE '%'||#{item}||'%'
+					      </foreach> 
+				     </if>
+				     <if test='searchWord!="" and searchWord!=null'>
+					 	and (
+					 	hotelInfo like '%'||#{searchWord}||'%' 
+					 	OR hotelName like '%'||#{searchWord}||'%' 
+			        	OR address like '%'||#{searchWord}||'%' 
+					 	)
+				     </if>
+				      <if test='hotelName!="" and hotelName!=null'>
+					  	AND hotelName like '%'||#{hotelName}||'%'
+				      </if>
+			        ) B
+			    ON A.hotelidx=B.hotelidx
+			    <if test='sort!=null and !"".equals(sort)'>
+			    	order by ${sort}
+			    </if>
+			    )A
+			LEFT JOIN 
+			    (SELECT hotelidx,avg(star) as starRating,count(star) as starCnt 
+			     FROM p1review 
+			     GROUP BY hotelidx ) B
+			ON A.hotelidx=B.hotelidx
+	    	WHERE NUM BETWEEN #{startRno} AND #{endRno}
+			<if test="minStar>=0 and minStar!=null and maxStar>=0 and maxStar!=null">
+		    	AND NVL(B.starRating,0) BETWEEN #{minStar} AND #{maxStar}
+		    </if>
+		</if>
+		<if test="memberidx!=null and memberidx!=0">
+			SELECT A.*,NVL2(likestatus,1,0) heart
+			FROM
+				(SELECT A.*,B.starRating,B.starCnt
+				 FROM
+				     (SELECT ROW_NUMBER() OVER(ORDER BY B.hotelidx) NUM,B.*,A.weekPrice,A.weekendPrice
+				      FROM 
+				         (SELECT B.hotelidx, min(b.weekPrice) as weekPrice,min(b.weekendPrice) as weekendPrice
+ 				          FROM 
+				             (SELECT roomidx 
+ 				              FROM p1reserve 
+				              <if test='checkin_date=="" or checkout_date=="" or checkin_date==null or checkout_date==null'>
+				             	 WHERE reserveStatus<![CDATA[>]]>70
+				              </if> 
+				              <if test='checkin_date!="" and checkout_date!="" and checkin_date!=null and checkout_date!=null'>
+					              WHERE reserveStatus<![CDATA[>]]>0
+		  			                and (#{checkin_date} BETWEEN CHECKIN+1 AND CHECKOUT-1
+						                OR #{checkout_date} BETWEEN CHECKIN+1 AND CHECKOUT-1
+						                OR (#{checkin_date}<![CDATA[<]]>CHECKIN+1 AND CHECKOUT-1<![CDATA[<]]>#{checkout_date}))
+				              </if> 
+ 				               ) A 
+				         RIGHT JOIN 
+				               (SELECT * 
+				                FROM p1roomlist 
+				                WHERE roomstatus=1
+				                <if test="minPrice>=0 and minPrice!=null and maxPrice>=0 and maxPrice!=null">	
+				                    AND ((#{minPrice}<![CDATA[<=]]>weekPrice AND weekPrice<![CDATA[<=]]>#{maxPrice}) OR (#{minPrice}<![CDATA[<=]]>weekendPrice and weekendPrice<![CDATA[<=]]>#{maxPrice}))
+				                </if> 
+				                <if test="per>=0 and per!=null">	
+				                    AND to_number(substr(roomType,2))<![CDATA[>=]]>#{per}
+ 				                </if>
+				                <if test="roomOptionList!=null">and 
+ 						      	    <foreach collection="roomOptionList" item="item" index="index" separator="and" open="(" close=")">
+						      		    roomOption LIKE '%'||#{item}||'%'
+						      	    </foreach> 
+					      	   </if> 
+				                ) B
+				         ON A.roomidx=B.roomidx
+				         WHERE A.roomidx IS NULL
+				         GROUP BY B.hotelidx
+				         ) A 
+				     JOIN 
+ 				         (SELECT hotelidx,hotelName,address,hotelImg 
+				          FROM p1hotellist 
+				          WHERE hotelStatus=1
+				          <if test="categoryCodeList!=null">and
+							 <foreach collection="categoryCodeList" item="item" index="index" separator="or" open="(" close=")">
+						    	 categoryCode LIKE '%'||#{item}||'%'
+						     </foreach> 
+ 					      </if>
+					      <if test="hotelOptionList!=null">and
+ 						       <foreach collection="hotelOptionList" item="item" index="index" separator="and" open="(" close=")">
+						       	 hotelOption LIKE '%'||#{item}||'%'
+						       </foreach> 
+					      </if>
+					      <if test='searchWord!="" and searchWord!=null'>
+						 	 and (
+						 	 hotelInfo like '%'||#{searchWord}||'%' 
+						 	 OR hotelName like '%'||#{searchWord}||'%' 
+				        	 OR address like '%'||#{searchWord}||'%' 
+						 	 )
+					      </if>
+					       <if test='hotelName!="" and hotelName!=null'>
+						   	   AND hotelName like '%'||#{hotelName}||'%'
+					       </if>
+				         ) B
+				     ON A.hotelidx=B.hotelidx
+				     <if test='sort!=null and !"".equals(sort)'>
+ 				    	 order by ${sort}
+ 				     </if>
+				     )A
+				 LEFT JOIN 
+				     (SELECT hotelidx,avg(star) as starRating,count(star) as starCnt 
+				      FROM p1review 
+				      GROUP BY hotelidx ) B
+				 ON A.hotelidx=B.hotelidx
+		    	 WHERE NUM BETWEEN #{startRno} AND #{endRno}
+				 <if test="minStar>=0 and minStar!=null and maxStar>=0 and maxStar!=null">
+			     	 AND NVL(B.starRating,0) BETWEEN #{minStar} AND #{maxStar}
+			     </if>
+			)A 
+		LEFT JOIN
+			(SELECT likestatus,hotelidx 
+			 FROM p1likelist 
+			 WHERE memberidx=#{memberidx} AND likestatus=1
+			)B
+		ON A.hotelidx=B.hotelidx     
+		</if>
+	</select>
+	
+	<select id="getHotelOne" parameterType="com.simple.project1.model.HotelRoomVO" resultType="com.simple.project1.model.HotelRoomVO">
+		SELECT B.categoryName,A.* 
+		FROM
+			(SELECT categorycode,hotelidx,hotelname,businesstel,address,hotelinfo,hoteloption,hotelimg  
+			 FROM p1hotellist 
+			 WHERE hotelstatus=1 AND hotelidx=#{hotelidx}) A 
+		JOIN 
+			p1hotelcategory B
+		ON A.categorycode=B.categorycode
+	</select>
+	
+	<select id="getRoomList" parameterType="com.simple.project1.model.HotelRoomVO" resultType="com.simple.project1.model.HotelRoomVO">
+		SELECT A.* 
+		FROM 
+		    (SELECT roomidx,hotelidx,roomType,roomOption,roomName,weekPrice,weekendPrice,roomInfo,roomImg
+		     FROM p1roomlist 
+		     WHERE roomstatus=1 AND hotelidx=#{hotelidx} AND SYSDATE BETWEEN roomperiod1 AND roomperiod2
+		     <if test="per>=0 and per!=null">
+		       AND to_number(SUBSTR(roomType,2))<![CDATA[>=]]>#{per}
+		     </if>
+		) A 
+		LEFT JOIN
+		    (SELECT roomidx
+		     FROM p1reserve
+		     <if test='checkin_date=="" or checkout_date=="" or checkin_date==null or checkout_date==null'>
+           	 	WHERE reserveStatus<![CDATA[>]]>70
+		     </if> 
+		     <if test='checkin_date!="" and checkout_date!="" and checkin_date!=null and checkout_date!=null'>
+			 	WHERE reserveStatus<![CDATA[>]]>0
+  			      and (#{checkin_date} BETWEEN CHECKIN+1 AND CHECKOUT-1
+				      OR #{checkout_date} BETWEEN CHECKIN+1 AND CHECKOUT-1
+				      OR (#{checkin_date}<![CDATA[<]]>CHECKIN+1 AND CHECKOUT-1<![CDATA[<]]>#{checkout_date}))
+             </if> 
+		)B
+		ON A.roomidx=B.roomidx
+		WHERE B.roomidx IS NULL
+	</select>
+
+	<select id="getTrendView" parameterType="com.simple.project1.model.HotelRoomVO" resultType="int">
+		SELECT count(*)
+		FROM p1hotelview
+		WHERE viewdate=to_date(sysdate,'yy/mm/dd') AND hotelidx=#{hotelidx} AND memberidx=#{memberidx}
+	</select>
+	
+	<insert id="setTrendView" parameterType="com.simple.project1.model.HotelRoomVO">
+		INSERT INTO p1hotelview
+		VALUES(TO_DATE(sysdate,'yy/mm/dd'),#{memberidx},#{hotelidx})
+	</insert>
+</mapper>

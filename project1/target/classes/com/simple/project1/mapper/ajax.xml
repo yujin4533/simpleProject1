@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ajaxdb">
+
+	<select id="getHotelName" parameterType="String" resultType="String">
+		SELECT hotelName
+		FROM p1hotelList
+		WHERE lower(hotelName) LIKE '%'||lower(#{searchWord})||'%'
+	</select>
+	
+	<select id="getHotelidx" parameterType="String" resultType="String">
+		SELECT hotelidx
+		FROM p1hotelList
+		WHERE lower(hotelName) LIKE lower(#{clickWord})
+	</select>
+	
+	<select id="getRangePrice" resultType="com.simple.project1.model.HotelRoomVO">
+		WITH rangePrice AS
+		(
+			SELECT MIN(weekPrice) AS min, MAX(weekPrice) AS max 
+			FROM p1roomlist 
+			WHERE roomstatus=1
+		UNION ALL
+			SELECT MIN(weekendPrice) AS min, MAX(weekendPrice) AS max 
+			FROM p1roomlist 
+			WHERE roomstatus=1
+		)
+		SELECT MIN(min) as minPrice, MAX(max) as maxPrice
+		FROM rangePrice
+	</select>
+	
+	<select id="getHotelOptionList" resultType="com.simple.project1.model.HotelRoomVO">
+		SELECT DISTINCT COL AS hotelOption
+		FROM(
+			SELECT Regexp_Substr((SELECT hotelOption FROM (SELECT listagg(hotelOption||',')WITHIN GROUP (ORDER BY hotelOption) AS hotelOption
+			from (SELECT 1,hotelOption FROM p1hotellist)
+			GROUP BY 1)),'[^,]+', 1, Level) COL FROM Dual
+			Connect By Regexp_Substr((SELECT hotelOption FROM (SELECT listagg(hotelOption||',')WITHIN GROUP (ORDER BY hotelOption) AS hotelOption
+			FROM (SELECT 1,hotelOption FROM p1hotellist)
+			GROUP BY 1)), '[^,]+', 1, Level) 
+			Is Not Null
+		)
+	</select>
+	<select id="getRoomOptionList" resultType="com.simple.project1.model.HotelRoomVO">
+		SELECT DISTINCT COL AS roomOption
+		FROM(
+			SELECT Regexp_Substr((SELECT roomOption FROM (SELECT listagg(roomOption||',')WITHIN GROUP (ORDER BY roomOption) AS roomOption
+			from (SELECT 1,roomOption FROM p1roomlist)
+			GROUP BY 1)),'[^,]+', 1, Level) COL FROM Dual
+			Connect By Regexp_Substr((SELECT roomOption FROM (SELECT listagg(roomOption||',')WITHIN GROUP (ORDER BY roomOption) AS roomOption
+			FROM (SELECT 1,roomOption FROM p1roomlist)
+			GROUP BY 1)), '[^,]+', 1, Level) 
+			Is Not Null
+		)
+	</select>
+	
+	<select id="getCategoryCodeList" resultType="com.simple.project1.model.HotelRoomVO">
+		SELECT * FROM p1hotelcategory
+	</select>
+	
+	<select id="wordNameSearchView" parameterType="String" resultType="String">
+		SELECT hotelName
+		FROM p1hotellist
+		WHERE LOWER(hotelName) like '%'||LOWER(#{searchWord})||'%'
+	</select>
+	<select id="wordAddrSearchView" parameterType="String" resultType="String">
+		SELECT address
+		FROM p1hotellist
+		WHERE LOWER(address) like '%'||LOWER(#{searchWord})||'%'
+	</select>
+	
+	<select id="getReserveCK" parameterType="HashMap" resultType="int">
+		SELECT COUNT(*)
+		FROM p1reserve
+		WHERE reserveStatus<![CDATA[>]]>0 
+		AND (#{checkin_date} BETWEEN CHECKIN+1 AND CHECKOUT-1
+		     OR #{checkout_date} BETWEEN CHECKIN+1 AND CHECKOUT-1
+		     OR (#{checkin_date}<![CDATA[<]]>CHECKIN+1 and CHECKOUT-1<![CDATA[<]]>#{checkout_date}))
+		AND roomidx=#{roomidx}
+	</select>
+	
+	<insert id="setInsertReserve" parameterType="com.simple.project1.model.HotelRoomVO">
+		INSERT INTO p1reserve(reserveidx,memberidx,hotelidx,roomidx,checkIn,checkOut,price,vat)
+		VALUES(seq_p1reserve.nextval,#{memberidx},#{hotelidx},#{roomidx},#{checkin_date},#{checkout_date},#{weekPrice},#{weekendPrice})
+	</insert>
+	
+	<select id="getReviewCnt" parameterType="HashMap" resultType="int">
+		SELECT COUNT(star)
+		FROM p1review
+		WHERE reviewStatus=1 AND hotelidx=#{hotelidx}
+	</select>
+	<select id="getReviewAvg" parameterType="HashMap" resultType="double">
+		SELECT NVL(AVG(star),0.0)
+		FROM p1review
+		WHERE reviewStatus=1 AND hotelidx=#{hotelidx}
+	</select>
+	
+	<select id="getReviewList" parameterType="HashMap" resultType="com.simple.project1.model.ReviewVO">
+		SELECT title,content,reviewRegDate,star,reviewImg,nickName,picture
+		FROM 
+			(SELECT a.reviewidx,memberidx,hotelidx,title,content,reviewregdate,star,reviewimg
+		     FROM p1review 
+		     A 
+		     LEFT JOIN (SELECT reviewidx, listagg(reviewImg,',') within group(order by reviewidx) as reviewImg
+		           FROM p1review_img
+		           GROUP BY reviewidx)
+		    B
+		    ON A.reviewidx=B.reviewidx
+		    WHERE reviewstatus=1 AND hotelidx=#{hotelidx})
+		A
+		JOIN
+		    (select memberidx,nickname,picture
+		     from p1member
+		     where status=1)
+		B
+		ON A.memberidx=B.memberidx
+		ORDER BY ${sort}
+	</select>
+	
+	<select id="getTrendList" resultType="com.simple.project1.model.HotelRoomVO">
+		select B.hotelStatus,a.hotelidx,a.hotelName 
+		from 
+			p1hotellist 
+		A
+		JOIN 
+			(SELECT ROW_NUMBER() OVER(ORDER BY count(*) DESC)AS hotelStatus,hotelidx
+			 FROM p1hotelview
+			 WHERE viewdate=TO_DATE(SYSDATE,'yy/mm/dd')
+			 GROUP BY hotelidx)
+		B
+		ON A.hotelidx=B.hotelidx
+		WHERE B.hotelStatus BETWEEN 1 AND 10
+	</select>
+	
+	<select id="ajaxHotelChart" resultType="com.simple.project1.model.HotelRoomVO">
+		SELECT A.*,NVL(cnt1,0) hotelStatus
+		FROM 
+			(SELECT A.categoryCode,A.categoryname,totalcnt,NVL(cnt0,0) roomStatus
+			 FROM 
+			 	(SELECT A.categoryCode,categoryname,nvl(totalcnt,0) totalcnt
+				 FROM p1hotelcategory A 
+				 LEFT JOIN 
+				 	(SELECT categoryCode,count(*) totalCnt
+					 FROM p1hotellist
+		             GROUP BY categoryCode) B
+				ON a.categorycode=B.categorycode) A 
+			LEFT JOIN 
+				(SELECT categoryCode,count(*) cnt0
+			 	FROM p1hotellist
+			 	WHERE hotelstatus=0
+			 	GROUP BY categoryCode) B
+				ON A.categorycode=B.categorycode) A 
+		LEFT JOIN 
+			(SELECT categoryCode,count(*) cnt1
+			 FROM p1hotellist
+			 WHERE hotelstatus=1
+			 GROUP BY categoryCode) B
+		ON A.categorycode = B.categorycode
+		ORDER BY A.categorycode
+<!-- 		SELECT B.categoryName,A.categoryCode -->
+<!-- 		FROM  -->
+<!-- 			(SELECT categoryCode as code,count(categorycode) as categoryCode -->
+<!-- 			 FROM p1hotellist  -->
+<!-- 			 WHERE hotelStatus=1 -->
+<!-- 			 GROUP BY categoryCode) A -->
+<!-- 		JOIN p1hotelcategory B -->
+<!-- 		ON a.code=b.categoryCode -->
+	</select>
+	
+
+</mapper>

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="admindb">
+
+	<insert id="hotelAdd">
+		<if test='hotelImg!=null and hotelImg!=""'>
+			INSERT INTO p1hotelList(categoryCode,hotelidx,hotelName,businessTel,address,hotelInfo,hotelOption,hotelImg) 
+			VALUES(#{categoryCode},seq_p1hotelList.nextval,#{hotelName},#{businessTel},#{address},#{hotelInfo},#{hotelOption},#{hotelImg})
+		</if>
+		<if test='hotelImg==null or hotelImg==""'>
+			INSERT INTO p1hotelList(categoryCode,hotelidx,hotelName,businessTel,address,hotelInfo,hotelOption) 
+			VALUES(#{categoryCode},seq_p1hotelList.nextval,#{hotelName},#{businessTel},#{address},#{hotelInfo},#{hotelOption})
+		</if>
+	</insert>
+	
+	<insert id="roomAdd">
+		<if test='roomImg!=null and roomImg!=""'>
+			INSERT INTO p1roomList(roomidx,hotelidx,roomType,roomOption,roomName,weekPrice,weekendPrice,roomInfo,roomImg,roomPeriod1,roomPeriod2) 
+			VALUES(seq_p1roomList.nextval,#{hotelidx},#{roomType},#{roomOption},#{roomName},#{weekPrice},#{weekendPrice},#{roomInfo},#{roomImg},#{roomPeriod1},#{roomPeriod2})
+		</if>
+		<if test='roomImg==null or roomImg==""'>
+			INSERT INTO p1roomList(roomidx,hotelidx,roomType,roomOption,roomName,weekPrice,weekendPrice,roomInfo,roomPeriod1,roomPeriod2) 
+			VALUES(seq_p1roomList.nextval,#{hotelidx},#{roomType},#{roomOption},#{roomName},#{weekPrice},#{weekendPrice},#{roomInfo},#{roomPeriod1},#{roomPeriod2})
+		</if>
+	</insert>
+	
+	<select id="getAdminHotelCnt" resultType="int">
+		SELECT count(*)
+		FROM p1hotelList
+	</select>
+	
+	<select id="getAdminHotelList" parameterType="com.simple.project1.model.HotelRoomVO" resultType="com.simple.project1.model.HotelRoomVO">
+		SELECT * 
+		FROM(
+			SELECT ROW_NUMBER() OVER(ORDER BY hotelidx) as num,hotelidx,hotelName,address,businessTel,hotelRegDay,hotelStatus
+			FROM p1hotelList
+		)
+		WHERE num between #{startRno} and #{endRno}
+	</select>
+	
+	<select id="getAdminHotelDetail" parameterType="String" resultType="com.simple.project1.model.HotelRoomVO">
+		SELECT B.categoryName,A.categoryCode,A.hotelidx,A.hotelName,A.address,A.businessTel,A.hotelOption,
+				A.hotelInfo,A.hotelImg,A.hotelRegDay,A.hotelStatus
+		FROM p1hotelList A LEFT JOIN p1hotelcategory B
+		ON A.categorycode = B.categoryCode
+		WHERE hotelidx=#{hotelidx}
+	</select>
+	
+	<select id="getAdminRoomList" parameterType="String" resultType="com.simple.project1.model.HotelRoomVO">
+		SELECT roomidx,roomName,roomType,roomImg,roomOption,roomInfo,weekendPrice,weekPrice,roomPeriod1,roomPeriod2,roomStatus
+		FROM p1roomList
+		WHERE hotelidx=#{hotelidx}
+	</select>
+	
+	<update id="setHotelStatus" parameterType="com.simple.project1.model.HotelRoomVO">
+		UPDATE p1hotellist
+		SET hotelStatus=#{hotelStatus}
+		WHERE hotelidx=#{hotelidx}		
+	</update>
+	
+	<update id="setRoomStatus" parameterType="com.simple.project1.model.HotelRoomVO">
+		UPDATE p1roomlist
+		SET roomStatus=#{roomStatus}
+		WHERE hotelidx=#{hotelidx}
+		<if test="roomidx!=null and roomidx!=0">
+			AND roomidx=#{roomidx}
+		</if>
+	</update>
+	
+	<select id="getAdminReserveCnt" resultType="int">
+		SELECT count(reserveidx)
+		FROM p1reserve
+	</select>
+
+	<select id="getAdminReserveList" parameterType="com.simple.project1.model.HotelRoomVO" resultType="com.simple.project1.model.HotelRoomVO">
+		SELECT * 
+		FROM(
+			SELECT ROW_NUMBER() OVER(ORDER BY reserveidx DESC) NUM,memberName as categoryName, reserveidx as roomidx,hotelRegDay,checkin_date,checkout_date,roomStatus,weekPrice,weekendPrice,roomName,A.hotelidx,hotelName
+			FROM
+			    (SELECT memberName,reserveidx,reserveDate as hotelRegDay,hotelidx,checkIn as checkin_date,checkOut as checkout_date,reserveStatus as roomStatus,price as weekPrice,vat as weekendPrice,roomidx
+				 FROM p1reserve A JOIN p1member B
+			     ON A.memberIdx = B.memberIdx)A
+			JOIN 
+			    (SELECT roomidx,roomName,A.hotelidx,hotelName
+				 FROM p1roomlist A join p1hotellist B
+				 ON A.hotelidx = B.hotelidx)B
+			ON A.roomidx = B.roomidx
+		)
+		WHERE num between #{startRno} and #{endRno}
+	</select>
+	
+	<update id="setCheckIn">
+		UPDATE p1reserve 
+		SET reservestatus=2 
+		WHERE reservestatus=1 AND checkin<![CDATA[<=]]>to_date(sysdate,'yy/mm/dd')
+	</update>
+	
+	<select id="getCheckIn" resultType="int">
+		SELECT COUNT(*)
+		FROM p1reserve
+ 		WHERE reservestatus=1 AND checkin<![CDATA[<=]]>to_date(sysdate,'yy/mm/dd')
+	</select>
+	
+	<update id="setCheckOut">
+		UPDATE p1reserve 
+		SET reservestatus=3
+		WHERE reservestatus=2 AND checkout<![CDATA[<=]]>to_date(sysdate,'yy/mm/dd')
+	</update>
+	
+	<select id="getCheckOut" resultType="int">
+		SELECT COUNT(*)
+		FROM p1reserve
+ 		WHERE reservestatus=2 AND checkout<![CDATA[<=]]>to_date(sysdate,'yy/mm/dd')
+	</select>
+</mapper>
