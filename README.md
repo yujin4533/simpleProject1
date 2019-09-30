@@ -22,3 +22,11 @@
 ##### 기상청api를 이용 한 제주도 날씨
 ##### 조회순으로 실시간숙소
 ##### 신규/예약 순 상품
+<br>
+-- O.S : Window 10 <br>
+-- Language : Java SE JDK 1.8 / JSP & Servlet <br>
+  HTML5, Javascript, CSS / jQuery <br>
+  BootStrap / Ajax(JSON, XML) <br>
+-- WAS : Apache Tomcat 1.8 <br>
+-- DB : Oracle XE 11g <br>
+-- Developer Tool : Spring Tool Suite, Git, MyBatis, Oracle SQL Developer <br>
