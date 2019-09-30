@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.servlet.ModelAndView;
 
 import com.simple.project1.common.FileManager;
+import com.simple.project1.common.MyUtil;
 import com.simple.project1.model.HotelRoomVO;
 import com.simple.project1.service.InterAdminService;
 
@@ -47,7 +48,7 @@ public class AdminController {
 		if(!attach.isEmpty()) { // 이미지 있을 경우
 			HttpSession session = mrequest.getSession();
 			String root = session.getServletContext().getRealPath("/");
-			String path = root + "resource" + File.separator + "images" + File.separator + "hotel";
+			String path = root + "resources" + File.separator + "images" + File.separator + "hotel";
 			
 			try {
 			
@@ -88,7 +89,7 @@ public class AdminController {
 		if(!attach.isEmpty()) { // 이미지 있을 경우
 			HttpSession session = mrequest.getSession();
 			String root = session.getServletContext().getRealPath("/");
-			String path = root + "resource" + File.separator + "images" + File.separator + "room";
+			String path = root + "resources" + File.separator + "images" + File.separator + "room";
 			
 			try {
 
@@ -125,10 +126,18 @@ public class AdminController {
 	}
 	
 	@RequestMapping(value = "/productStatus.p1") // 숙소 리스트
-	public ModelAndView productStatus(ModelAndView mv, HotelRoomVO hotelroomvo) {
+	public ModelAndView productStatus(HttpServletRequest request, ModelAndView mv, HotelRoomVO hotelroomvo) {
 		hotelroomvo.setTotalCnt(service.getAdminHotelCnt());
 		hotelroomvo.setSizePerPage(15);
 		List<HotelRoomVO> hotelList = service.getAdminHotelList(hotelroomvo);
+		
+		String pagebar = "<ul>";
+		hotelroomvo.setBlockSize(5);
+		hotelroomvo.setAddress("productStatus");
+		pagebar += MyUtil.searchPageBar(request, hotelroomvo);
+		pagebar += "</ul>";
+		
+		mv.addObject("pagebar",pagebar);  
 		mv.addObject("hotelList",hotelList);
 		mv.setViewName("admin/productStatus.tiles1");
 		return mv;
@@ -211,6 +220,15 @@ public class AdminController {
 		hotelroomvo.setTotalCnt(service.getAdminReserveCnt());
 		hotelroomvo.setSizePerPage(15);
 		List<HotelRoomVO> resreveList = service.getAdminReserveList(hotelroomvo);
+		
+		String pagebar = "<ul>";
+		hotelroomvo.setBlockSize(5);
+		hotelroomvo.setAddress("productStatus");
+		pagebar += MyUtil.searchPageBar(request, hotelroomvo);
+		pagebar += "</ul>";
+		
+		mv.addObject("pagebar",pagebar);  
+		
 		mv.addObject("resreveList",resreveList);
 		mv.setViewName("admin/adminReserveList.tiles1");
 		return mv;

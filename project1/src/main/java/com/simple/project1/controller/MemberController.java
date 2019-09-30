@@ -181,7 +181,7 @@ public class MemberController {
 		
 		if(!attach.isEmpty()) { // 이미지 있을 경우
 			String root = session.getServletContext().getRealPath("/");
-			String path = root + "resource" + File.separator + "images" + File.separator + "member";
+			String path = root + "resources" + File.separator + "images" + File.separator + "member";
 			
 			try {
 			
@@ -267,14 +267,11 @@ public class MemberController {
 	        int week = 0;
 	        int weekend = 0;
 	        for(int i=0;i<day;i++) {
-	        	cal.setTime(in);     
 		        dayNum = cal.get(Calendar.DAY_OF_WEEK);
 		        if(dayNum<6)
 		        	week++;
 		        else
 		        	weekend++;
-
-		        in = new Date(in.getTime() + (1000*60*60*24*+1));
 	        }
 	        
 	        hotelroomVO.setAdult(week); // 주중숙박일
@@ -370,7 +367,7 @@ public class MemberController {
 		if(!attachList.isEmpty()) { 
 			HttpSession session = mrequest.getSession();
 			String root = session.getServletContext().getRealPath("/");
-			String path = root + "resource" + File.separator + "images" + File.separator + "review";
+			String path = root + "resources" + File.separator + "images" + File.separator + "review";
 			
 			byte[] bytes = null;
 			String newFileName= "";

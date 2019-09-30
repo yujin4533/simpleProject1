@@ -181,13 +181,13 @@
 <!-- 호텔정보 보내는 폼 -->
 <form name="reserveHotelInfoFrm">
 	<input type="hidden" name="hotelidx" value="${hotelroomVO.hotelidx }">
-	<input type="text" name="roomidx" value="${hotelroomVO.roomidx}">
+	<input type="hidden" name="roomidx" value="${hotelroomVO.roomidx}">
 	<input type="hidden" name="checkout_date" value="${hotelroomVO.checkout_date}">
 	<input type="hidden" name="checkin_date" value="${hotelroomVO.checkin_date}">
-	<input type="text" name="weekPrice" value="${hotelroomVO.weekPrice*hotelroomVO.adult+hotelroomVO.weekendPrice*hotelroomVO.children}"><!-- 세금미포함 -->
+	<input type="hidden" name="weekPrice" value="${hotelroomVO.weekPrice*hotelroomVO.adult+hotelroomVO.weekendPrice*hotelroomVO.children}"><!-- 세금미포함 -->
 	
 	<fmt:parseNumber var="test" value="${(hotelroomVO.weekPrice*hotelroomVO.adult+hotelroomVO.weekendPrice*hotelroomVO.children)/100*10 }" integerOnly="true"/>
-	<input type="text" name="weekendPrice" value="${test}"><!-- 세금 --> <!-- 정수처리 위에서 해줘야 넘어감 안그럼 400 badrequest -->
+	<input type="hidden" name="weekendPrice" value="${test}"><!-- 세금 --> <!-- 정수처리 위에서 해줘야 넘어감 안그럼 400 badrequest -->
 
 	<input type="hidden" name="hotelName" value="${hotelroomVO.hotelName}">
 	<input type="hidden" name="address" value="${hotelroomVO.address}">

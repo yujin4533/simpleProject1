@@ -95,22 +95,15 @@
 					<form name="hotelidxFrm" action="/project1/productStatusDetail.p1">
 						<input type="hidden" name="hotelidx" value="">
 					</form>
-<%-- 
-					<form name="goViewFrm">
-						<input type="hidden" name="seq"/>
-						<input type="hidden" name="gobackURL" value="${gobackURL}" />
-					</form>
-	
 					<div class="col-12">
-	          			<div class="custom-pagination" id="pagebar">
-	            			<ul class="list-unstyled">
-	           					<c:if test="${pagebar!=null}">
+						<div class="custom-pagination">
+							<ul class="list-unstyled" id="pagebar">
+								<c:if test="${pagebar!=null}">
 									${pagebar}
 								</c:if>
-	    					</ul>
-	  					</div>
-					</div>
-	 --%>
+							</ul>
+						</div>
+					</div>					
 					<form name="searchFrm" style="text-align: center;">
 						<select style="width:80px; height: 40px;">
 							<option>숙소명</option>

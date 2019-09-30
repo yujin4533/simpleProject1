@@ -135,13 +135,14 @@ NOMINVALUE
 NOCACHE
 NOCYCLE;
 
+
 -- 리뷰 테이블
 CREATE TABLE p1review(
     reviewidx NUMBER(20) NOT NULL,
     reserveidx NUMBER(20) NOT NULL,
     memberidx NUMBER(20),
     hotelidx NUMBER(4),
-    title VARCHAR2(50) NOT NULL,
+    title VARCHAR2(100) NOT NULL,
     content VARCHAR2(400) NOT NULL,
     star NUMBER(2,1) NOT NULL,
     reviewRegDate DATE DEFAULT sysdate,

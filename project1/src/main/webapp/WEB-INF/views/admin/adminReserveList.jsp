@@ -106,6 +106,15 @@
 							</c:forEach>
 						</c:if>
 					</table>
+					<div class="col-12">
+						<div class="custom-pagination">
+							<ul class="list-unstyled" id="pagebar">
+								<c:if test="${pagebar!=null}">
+									${pagebar}
+								</c:if>
+							</ul>
+						</div>
+					</div>	
 					<form name="hotelidxFrm" action="/project1/productStatusDetail.p1">
 						<input type="hidden" name="hotelidx" value="">
 					</form>
