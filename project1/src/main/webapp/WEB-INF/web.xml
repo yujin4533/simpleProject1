@@ -48,7 +48,7 @@
 	</filter-mapping>
 	
 	<welcome-file-list>
-		<welcom-file>index.p1</welcom-file>
+		<welcome-file>index.p1</welcome-file>
 	</welcome-file-list>
 
 </web-app>

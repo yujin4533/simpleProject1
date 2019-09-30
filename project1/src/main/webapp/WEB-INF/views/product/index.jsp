@@ -53,7 +53,6 @@ $(document).ready(function(){
 				}
 				else 
 					$("#displayList").hide();
-
 			},
 			error: function(request, status, error){
 				alert("code: "+request.status+"\n"+"message: "+request.responseText+"\n"+"error: "+error);
@@ -127,18 +126,13 @@ $(document).ready(function(){
 	        alert("로그 조회 기간은 " + rangeDate + "일을 초과할 수 없습니다.");        
 	        return false;
 	    }
-
 		var checkin_dateVal = $("input#checkin_date").val();
 		var checkout_dateVal = $("input#checkout_date").val();
 		checkin_dateVal = checkin_dateVal.substring(0,4) + checkin_dateVal.substring(5,7) + checkin_dateVal.substring(8);
 		checkout_dateVal = checkout_dateVal.substring(0,4) + checkout_dateVal.substring(5,7) + checkout_dateVal.substring(8);
-
 	});
 	
 }); // end of $(document).ready------------------------
-
-
-
 function goSearch() {
 	document.infoSearchFrm.action = "<%=request.getContextPath()%>/search.p1";
 	document.infoSearchFrm.submit();

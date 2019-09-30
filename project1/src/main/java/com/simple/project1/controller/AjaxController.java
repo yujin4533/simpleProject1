@@ -192,8 +192,7 @@ public class AjaxController {
 			msg = "OK";
 		
 		jsonObj.put("msg", msg);
-		String result = jsonObj.toString();
-		return result;
+		return jsonObj.toString();
 	}
 	
 	@RequestMapping(value="/ajaxInsertReserve.p1", produces="text/plain;charset=UTF-8" )

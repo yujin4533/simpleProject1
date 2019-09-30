@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.simple</groupId>
 	<artifactId>project1</artifactId>
-	<name>simpleP1</name>
+	<name>project1</name>
 	<packaging>war</packaging>
 	<version>1.0.0-BUILD-SNAPSHOT</version>
 	<properties>

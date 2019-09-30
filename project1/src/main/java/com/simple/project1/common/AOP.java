@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 public class AOP {
 	// 로그인 체크 
 	@Pointcut("execution(public * com.simple.project1..*Controller.Login_*(..))")
-		public void Login() {
+	public void Login() {
 	}
 	// 로그인 체크 + 쿼리
 	@Pointcut("execution(public * com.simple.project1..*Controller.Login2_*(..))")
